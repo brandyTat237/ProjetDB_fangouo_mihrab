@@ -18,7 +18,7 @@
 4. Partie 2 (à venir)
 5. Organisation du dépôt
 
----
+
 
  ## 1. Présentation du projet
 
@@ -31,7 +31,7 @@ Le projet suit les étapes de la méthode MERISE :
 | Partie 1 | 1. Analyse des besoins · 2. MCD | 16/10/26 |
 | Partie 2 | 3. MLD et MPD · 4. Insertion des données · 5. Requêtes · 6. Vidéo | 09/11/26 |
 
----
+
 
 ## 2. Étape 1 : analyse des besoins
 
@@ -51,7 +51,7 @@ D'abord, établis les règles de gestions des données de ton entreprise, sous l
 Ensuite, à partir de ces règles, fournis un dictionnaire de données brutes avec les colonnes suivantes, regroupées dans un tableau : signification de la donnée, type, taille en nombre de caractères ou de chiffres. Il doit y avoir entre 25 et 35 données. Il sert à fournir des informations supplémentaires sur chaque donnée (taille et type) mais sans a priori sur comment les données vont être modélisées ensuite.
 
 Fournis donc les règles de gestion et le dictionnaire de données.
-```
+
 
 **Éléments ajoutés à la base de prompt :**
 
@@ -199,7 +199,7 @@ Nous avons vérifié l'adéquation de la réponse de l'IA avec les exigences du 
 
 **Décision :** la réponse respectant toutes les exigences formulées dans le prompt, nous l'avons conservée sans la resoumettre. Une nouvelle soumission aurait obligé l'IA soit à dépasser 35 données, soit à appauvrir les règles de gestion. Le sujet autorisant l'ajout de données au MCD, **nous ajoutons ces données manquantes directement dans le MCD** afin qu'il soit cohérent avec l'ensemble des règles de gestion.
 
----
+
 
 ## 3. Étape 2 : MCD
 
@@ -227,13 +227,11 @@ Il comporte **13 entités** (MEMBRE, ANNONCE, CATEGORIE, MARQUE, PHOTO, MISE_EN_
 - **Ville et code postal gardés dans MEMBRE** : il n'existe pas de dépendance fonctionnelle stricte entre les deux (un code postal peut couvrir plusieurs communes), donc la 3FN reste respectée.
 - **Données ajoutées par rapport au dictionnaire** : les données citées dans les règles de gestion mais absentes du dictionnaire (voir section 2.4) ont été intégrées au MCD, par exemple `mot_de_passe`, `solde`, `prix_propose`, `date_envoi` ou `date_evaluation`.
 
----
 
 ## 4. Partie 2 (à venir)
 
 Étapes 3 à 6 : MLD et MPD en SQL, insertion des données, requêtes, vidéo de présentation.
 
----
 
 ## 5. Organisation du dépôt
 
