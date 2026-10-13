@@ -15,8 +15,7 @@
    - Dictionnaire de données
    - Analyse du résultat
 3. Étape 2 : MCD
-4. Partie 2 (à venir)
-5. Organisation du dépôt
+4. Partie 2 
 
 ---
 
@@ -228,18 +227,4 @@ Il comporte **13 entités** (MEMBRE, ANNONCE, CATEGORIE, MARQUE, PHOTO, MISE_EN_
 
 ---
 
-## 4. Partie 2 :
-
-Étapes 3 à 6 : MLD et MPD en SQL, insertion des données, requêtes, vidéo de présentation.
-
----
-
-## 5. Organisation du dépôt
-
-```text
-ProjetDB_fangouo_mihrab/
-├── README.md                          
-├── Prompts/
-│   └── prompt_analyse_besoins.txt     
-└── MCD/                               
-```
+## 4. Partie 2:
