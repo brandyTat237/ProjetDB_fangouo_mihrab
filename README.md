@@ -1,10 +1,7 @@
-# Mini-projet Bases de données — Plateforme de revente entre particuliers
+# Mini-projet Bases de données : Plateforme de revente entre particuliers
 
-**Module :** TI503N – Bases de données 1 : Concepts de base (Efrei)
 
-**Binôme :** JORESSE BRANDY FANGOUO TATSING – ROUA MIHRAB
-
-**Méthode :** MERISE
+**Binôme :** JORESSE BRANDY FANGOUO TATSING , ROUA MIHRAB
 
  ## Sommaire
 
