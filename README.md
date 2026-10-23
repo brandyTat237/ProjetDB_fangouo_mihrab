@@ -224,4 +224,60 @@ Il comporte **13 entités** (MEMBRE, ANNONCE, CATEGORIE, MARQUE, PHOTO, MISE_EN_
 
 ---
 
-## 4. Partie 2:
+## 4. Partie 2 : MLD et MPD
+
+### 4.1. MLD (Modèle Logique de Données)
+En appliquant les règles de transformation de MCD vers MLD, on obtient les relations suivantes:
+- **MEMBRE** (<u>id_membre</u>, pseudo, nom, prenom, email, mot_de_passe, adresse_rue, code_postal, ville, date_inscription, solde)
+- **CATEGORIE** (<u>id_categorie</u>, nom_categorie, #id_categorie_parent)
+- **MARQUE** (<u>id_marque</u>, nom_marque)
+- **ANNONCE** (<u>id_annonce</u>, titre, description, prix_vente, etat, taille, date_publication, statut, #id_membre, #id_marque, #id_categorie)
+- **PHOTO** (<u>id_annonce</u>, <u>num_ordre</u>, url_photo) *- Clé primaire composite*
+- **MISE_EN_AVANT** (<u>id_annonce</u>, <u>date_debut</u>, duree_jours, prix_option) *- Clé primaire composite*
+- **MESSAGE** (<u>id_message</u>, contenu, date_heure_envoi, prix_propose, reponse_offre, #id_annonce, #id_membre_expediteur, #id_membre_destinataire)
+- **COMMANDE** (<u>num_commande</u>, date_commande, frais_protection, frais_port, moyen_paiement, #id_membre, #id_annonce)
+- **TRANSPORTEUR** (<u>id_transporteur</u>, nom_transporteur)
+- **POINT_RELAIS** (<u>id_point_relais</u>, adresse_point_relais, nom_point_relais)
+- **LIVRAISON** (<u>num_suivi</u>, mode_livraison, date_envoi, date_livraison, #num_commande, #id_transporteur, #id_point_relais)
+- **LITIGE** (<u>id_litige</u>, date_ouverture, date_cloture, motif, description, decision, #num_commande)
+- **EVALUATION** (<u>id_evaluation</u>, note, commentaire, date_evaluation, #id_membre_redacteur, #id_membre_evalue, #num_commande)
+
+### 4.2. MPD (Modèle Physique de Données)
+Le MPD est implémenté en SQL (compatible PostgreSQL) dans les fichiers suivants :
+- `1_creation.sql` : création des tables et des clés.
+- `2_contraintes.sql` : contraintes de validation (CHECK, UNIQUE...).
+
+---
+
+## 5. Étape 5 : Interrogation de la BD
+
+### 5.1. Scénario d'utilisation
+**Rôle :** Le service marketing et qualité de la plateforme.
+**Objectif :** Analyser l'activité pour préparer une campagne de communication et améliorer la satisfaction client. Le gestionnaire souhaite :
+1. Identifier les membres les plus actifs (vendeurs avec le plus d'annonces).
+2. Analyser le chiffre d'affaires généré par catégorie.
+3. Surveiller les litiges et évaluer les transporteurs.
+4. Trouver les annonces très populaires qui pourraient bénéficier d'une mise en avant.
+
+### 5.2. Étude du plan d'exécution (Algèbre relationnelle)
+**Requête étudiée :** *Trouver le pseudo des membres ayant publié une annonce dans la catégorie 'Robes' à un prix supérieur à 50€.*
+
+**Algèbre relationnelle :**
+\[
+ \pi_{pseudo} (\sigma_{prix\_vente > 50 \land nom\_categorie = 'Robes'} (MEMBRE \bowtie ANNONCE \bowtie CATEGORIE)) 
+\]
+
+**Estimations de lignes  :**
+- `MEMBRE` : 50 lignes
+- `ANNONCE` : 100 lignes
+- `CATEGORIE` : 10 lignes
+
+**Arbre 1 : Plan non optimisé **
+```mermaid
+graph TD
+    A["Projection (pseudo)<br/>~5 lignes"] --> B["Sélection (prix > 50 ET nom='Robes')<br/>~5 lignes"]
+    B --> C["Jointure (ANNONCE.id_membre = MEMBRE.id_membre)<br/>~5000 lignes"]
+    C --> D["Jointure (ANNONCE.id_categorie = CATEGORIE.id_categorie)<br/>~50000 lignes"]
+    D --> E["MEMBRE<br/>50 lignes"]
+    D --> F["ANNONCE<br/>100 lignes"]
+    D --> G["CATEGORIE<br/>10 lignes"]
