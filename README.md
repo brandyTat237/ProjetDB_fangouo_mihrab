@@ -263,9 +263,10 @@ Le MPD est implémenté en SQL (compatible PostgreSQL) dans les fichiers suivant
 **Requête étudiée :** *Trouver le pseudo des membres ayant publié une annonce dans la catégorie 'Robes' à un prix supérieur à 50€.*
 
 **Algèbre relationnelle :**
-\[
- \pi_{pseudo} (\sigma_{prix\_vente > 50 \land nom\_categorie = 'Robes'} (MEMBRE \bowtie ANNONCE \bowtie CATEGORIE)) 
-\]
+
+$$
+\pi_{pseudo} (\sigma_{prix\_vente > 50 \land nom\_categorie = 'Robes'} (MEMBRE \bowtie ANNONCE \bowtie CATEGORIE))
+$$
 
 **Estimations de lignes  :**
 - `MEMBRE` : 50 lignes
