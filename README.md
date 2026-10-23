@@ -284,3 +284,15 @@ graph TD
     D --> F["ANNONCE<br/>100 lignes"]
     D --> G["CATEGORIE<br/>10 lignes"]
 ```
+**Arbre 2 : Plan optimisé (Sélections au plus tôt)**
+
+```mermaid
+graph TD
+    A["Projection (pseudo)<br/>~1 ligne"] --> B["Jointure (ANNONCE.id_membre = MEMBRE.id_membre)<br/>~5 lignes"]
+    B --> C["MEMBRE<br/>50 lignes"]
+    B --> D["Jointure (ANNONCE.id_categorie = CATEGORIE.id_categorie)<br/>~5 lignes"]
+    D --> E["Sélection (prix > 50)<br/>~10 lignes"]
+    E --> F["ANNONCE<br/>100 lignes"]
+    D --> G["Sélection (nom = 'Robes')<br/>1 ligne"]
+    G --> H["CATEGORIE<br/>10 lignes"]
+```
