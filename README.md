@@ -283,6 +283,7 @@ graph TD
     D --> E["MEMBRE<br/>50 lignes"]
     D --> F["ANNONCE<br/>100 lignes"]
     D --> G["CATEGORIE<br/>10 lignes"]
+```  <--- REGARDE BIEN CES 3 PETITS POINTS ICI, ILS SONT OBLIGATOIRES !
 
 **Arbre 2 : Plan optimisé (Sélections au plus tôt)**
 
@@ -295,3 +296,4 @@ graph TD
     E --> F["ANNONCE<br/>100 lignes"]
     D --> G["Sélection (nom = 'Robes')<br/>1 ligne"]
     G --> H["CATEGORIE<br/>10 lignes"]
+``` <--- ET CES 3 PETITS POINTS ICI AUSSI POUR FERMER LE 2EME ARBRE !
