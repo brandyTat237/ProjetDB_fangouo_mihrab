@@ -264,13 +264,65 @@ Les clés étrangères en double générées par Looping (`id_membre`, `id_membr
 - L'association récursive « sous-catégorie de » devient la clé étrangère `id_categorie_mere`, qui référence CATEGORIE elle-même (vide pour une catégorie principale).
 - Les cardinalités 0,1 donnent des clés étrangères facultatives : `id_marque`, `num_commande` dans ANNONCE (article non vendu) et `id_point_relais` (livraison à domicile).
 - `num_commande` est unique dans LIVRAISON et dans LITIGE, car une commande donne lieu à une seule livraison et fait l'objet d'au plus un litige.
+  
+### 4.2 MPD : création des tables ([`1_creation.sql`](1_creation.sql))
 
-### 4.2. MPD (Modèle Physique de Données)
-Le MPD est implémenté en SQL (compatible PostgreSQL) dans les fichiers suivants :
-- `1_creation.sql` : création des tables et des clés.([`1_creation.sql`](1_creation.sql)
-- `2_contraintes.sql` : contraintes de validation (CHECK, UNIQUE...).([`2_contraintes.sql`](2_contraintes.sql))
- 
+Le MPD est implémenté en SQL pour MySQL 8. Le script crée la base `revente` et ses 14 tables, avec les contraintes d'intégrité :
+
+- 14 clés primaires, dont trois composées : PHOTO (`id_annonce`, `num_ordre`), MISE_EN_AVANT (`id_annonce`, `date_debut`) et MET_EN_FAVORI (`id_membre`, `id_annonce`) ;
+- 20 clés étrangères, dont une récursive sur CATEGORIE (`id_categorie_mere`) ;
+- des `NOT NULL` sur toutes les données obligatoires ; les clés étrangères issues d'une cardinalité 0,1 (`id_marque`, `num_commande` dans ANNONCE, `id_point_relais`, `id_categorie_mere`) acceptent la valeur `NULL` ;
+- deux contraintes `UNIQUE` sur `num_commande` dans LIVRAISON et dans LITIGE, qui traduisent les cardinalités 0,1 côté COMMANDE : une commande a au plus une livraison et au plus un litige.
+
+Pour gérer automatiquement la modification et la suppression des enregistrements référencés sans déclencher d'erreur, chaque clé étrangère porte une action :
+
+| Action | Clés étrangères concernées | Justification |
+|---|---|---|
+| `ON UPDATE CASCADE` | toutes | Si une clé primaire change, la nouvelle valeur est reportée partout où elle est utilisée. |
+| `ON DELETE CASCADE` | photos, mises en avant, favoris et messages d'une annonce ; annonces, commandes, messages et évaluations d'un membre ; livraison, évaluations et litige d'une commande ; annonces d'une catégorie | Ces lignes n'ont pas de sens sans la ligne qu'elles référencent (une photo sans annonce, par exemple). |
+| `ON DELETE SET NULL` | `id_marque` et `num_commande` dans ANNONCE, `id_point_relais` dans LIVRAISON, `id_categorie_mere` dans CATEGORIE | Le lien est facultatif (cardinalité 0,1) : la ligne reste, sans le lien. Une annonce dont la marque est supprimée reste en ligne sans marque ; une sous-catégorie dont la mère est supprimée devient une catégorie principale. |
+
+### 4.3 Contraintes de validation ([`2_contraintes.sql`](2_contraintes.sql))
+
+Le script ajoute 29 contraintes nommées (23 `CHECK` et 6 `UNIQUE`) et 2 valeurs par défaut. Elles traduisent les règles de gestion de l'étape 1 et couvrent les différents types vus en cours :
+
+| Type | Exemples | Règle |
+|---|---|---|
+| `UNIQUE` | pseudo et e-mail d'un membre ; couple (auteur, commande) dans EVALUATION ; nom de marque, de transporteur, de sous-catégorie | RG02, RG29 |
+| `CHECK … IN` | état de l'article (5 valeurs), statut de l'annonce, réponse à une offre, moyen de paiement, mode de livraison, motif et décision d'un litige | RG07, RG08, RG17, RG22, RG24, RG31, RG33 |
+| `CHECK … BETWEEN` | note de 1 à 5, numéro de photo de 1 à 20, durée de mise en avant de 1 à 30 jours | RG28, RG12, RG14 |
+| `CHECK … LIKE` | format de l'e-mail (`'%_@_%._%'`), URL des photos en `https://` | RG01, RG12 |
+| `CHECK … REGEXP` | code postal à 5 chiffres, numéro de commande au format `CMD-` + 8 chiffres | RG03, RG19 |
+| `CHECK` comparaisons | prix de vente, prix d'option et prix proposé positifs, frais positifs, solde jamais négatif | RG05, RG07, RG14, RG17, RG20 |
+| `CHECK` entre colonnes | livraison après l'envoi ; clôture d'un litige après son ouverture ; un litige clos a une décision et une date de clôture, un litige en cours n'a ni l'une ni l'autre ; une réponse n'existe que s'il y a une offre | RG17, RG26, RG33 |
+| `DEFAULT` | solde à 0 à l'inscription, statut « en ligne » à la publication | RG05, RG08 |
+
+Certaines règles ne peuvent pas s'écrire avec un `CHECK` : celles qui comparent deux tables (une offre inférieure au prix de l'annonce, une évaluation postérieure à la livraison, une commande qui ne regroupe que des articles d'un même vendeur) et celles qui portent sur une clé étrangère, car MySQL interdit un `CHECK` sur une colonne qui a une action `ON DELETE` / `ON UPDATE` (par exemple, un membre ne s'évalue pas lui-même). Elles demanderaient des triggers.
+
+### 4.4 Exécution des scripts
+
+Les scripts sont à exécuter dans MySQL Workbench (MySQL 8), dans cet ordre, car chacun dépend du précédent :
+
+1. [`1_creation.sql`](1_creation.sql) : création de la base `revente` et des 14 tables (le script supprime la base si elle existe déjà, il peut donc être relancé) ;
+2. [`2_contraintes.sql`](2_contraintes.sql) : ajout des contraintes de validation ;
+3. [`3_insertion.sql`](3_insertion.sql) : insertion des données ;
+4. [`4_interrogation.sql`](4_interrogation.sql) : requêtes du scénario d'utilisation, à exécuter une par une (Ctrl + Entrée).
+
+Pour repartir d'une base propre, il suffit de réexécuter les scripts 1, 2 puis 3.
 ---
+## 5. Étape 4 : insertion des données
+
+Les données ont été générées par une IA générative (Claude, d'Anthropic) à partir du prompt [`prompts/prompt_insertion.txt`](prompts/prompt_insertion.txt). Il reprend la forme du prompt du TP1 : modèle relationnel avec les clés, nombre de lignes attendues, ordre d'insertion, contraintes de validation à respecter, règles métier de cohérence et consignes de réalisme. Le résultat est dans [`3_insertion.sql`](3_insertion.sql), à exécuter après [`1_creation.sql`](1_creation.sql) et [`2_contraintes.sql`](2_contraintes.sql).
+
+| Table | Lignes | Table | Lignes |
+|---|---|---|---|
+| membre | 40 | photo | 316 |
+| categorie | 20 (3 niveaux) | mise_en_avant | 25 |
+| marque | 15 | met_en_favori | 150 |
+| transporteur | 4 | message | 150 |
+| point_relais | 12 | livraison | 45 |
+| commande | 45 | evaluation | 61 |
+| annonce | 120 | litige | 8 |
 
 ## 5. Étape 5 : Interrogation de la BD
 
@@ -281,7 +333,8 @@ Le MPD est implémenté en SQL (compatible PostgreSQL) dans les fichiers suivant
 2. Analyser le chiffre d'affaires généré par catégorie.
 3. Surveiller les litiges et évaluer les transporteurs.
 4. Trouver les annonces très populaires qui pourraient bénéficier d'une mise en avant.
-
+5.  ([`4_interrogation.sql`](4_interrogation.sql))
+   
 ### 5.2. Étude du plan d'exécution (Algèbre relationnelle)
 **Requête étudiée :** *Trouver le pseudo des membres ayant publié une annonce dans la catégorie 'Robes' à un prix supérieur à 50€.*
 
