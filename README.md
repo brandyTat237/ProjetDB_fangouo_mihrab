@@ -335,40 +335,104 @@ Les données ont été générées par une IA générative (Claude, d'Anthropic)
 4. Trouver les annonces très populaires qui pourraient bénéficier d'une mise en avant.
 5.  ([`4_interrogation.sql`](4_interrogation.sql))
    
-### 5.2. Étude du plan d'exécution (Algèbre relationnelle)
-**Requête étudiée :** *Trouver le pseudo des membres ayant publié une annonce dans la catégorie 'Robes' à un prix supérieur à 50€.*
+### 5.2.3 Étude des plans d'exécution
 
-**Algèbre relationnelle :**
+**Requête étudiée** (E1 dans [`4_interrogation.sql`](4_interrogation.sql)) : pseudos des membres ayant publié une annonce dans la catégorie « Robes » à un prix supérieur à 25 €.
+
+```sql
+SELECT m.pseudo
+FROM membre m
+JOIN annonce a ON a.id_vendeur = m.id_membre
+JOIN categorie c ON c.id_categorie = a.id_categorie
+WHERE c.nom_categorie = 'Robes'
+  AND a.prix_vente > 25;
+```
+
+Elle utilise trois opérateurs de l'algèbre relationnelle : la sélection (σ), la jointure (⋈) et la projection (π).
 
 $$
-\pi_{pseudo} (\sigma_{prix\_vente > 50 \land nom\_categorie = 'Robes'} (MEMBRE \bowtie ANNONCE \bowtie CATEGORIE))
+\pi_{pseudo} \left( \sigma_{prix\_vente > 25 \land nom\_categorie = 'Robes'} \left( MEMBRE \bowtie ANNONCE \bowtie CATEGORIE \right) \right)
 $$
 
-**Estimations de lignes  :**
-- `MEMBRE` : 50 lignes
-- `ANNONCE` : 100 lignes
-- `CATEGORIE` : 10 lignes
+**Données de départ** (nombres réels de lignes dans la base) :
 
-**Arbre 1 : Plan non optimisé **
+| Relation ou étape | Lignes |
+|---|---|
+| MEMBRE | 40 |
+| ANNONCE | 120 |
+| CATEGORIE | 20 |
+| annonces à plus de 25 € | 51 |
+| catégorie « Robes » | 1 |
+| annonces de robes | 17 |
+| robes à plus de 25 € (résultat) | 6 |
 
-```mermaid
-graph TD
-    A["Projection (pseudo)<br/>~5 lignes"] --> B["Sélection (prix > 50 ET nom='Robes')<br/>~5 lignes"]
-    B --> C["Jointure (ANNONCE.id_membre = MEMBRE.id_membre)<br/>~5000 lignes"]
-    C --> D["Jointure (ANNONCE.id_categorie = CATEGORIE.id_categorie)<br/>~50000 lignes"]
-    D --> E["MEMBRE<br/>50 lignes"]
-    D --> F["ANNONCE<br/>100 lignes"]
-    D --> G["CATEGORIE<br/>10 lignes"]
-```
-**Arbre 2 : Plan optimisé (Sélections au plus tôt)**
+**Calcul du nombre d'instructions.** Une sélection teste chaque ligne de sa table d'entrée une fois (n instructions). Une jointure compare chaque ligne de la première table à chaque ligne de la seconde (n₁ × n₂ instructions). Une projection traite chaque ligne de son entrée une fois (n instructions).
+
+**Plan 1 : jointures d'abord, sélections ensuite**
 
 ```mermaid
-graph TD
-    A["Projection (pseudo)<br/>~1 ligne"] --> B["Jointure (ANNONCE.id_membre = MEMBRE.id_membre)<br/>~5 lignes"]
-    B --> C["MEMBRE<br/>50 lignes"]
-    B --> D["Jointure (ANNONCE.id_categorie = CATEGORIE.id_categorie)<br/>~5 lignes"]
-    D --> E["Sélection (prix > 50)<br/>~10 lignes"]
-    E --> F["ANNONCE<br/>100 lignes"]
-    D --> G["Sélection (nom = 'Robes')<br/>1 ligne"]
-    G --> H["CATEGORIE<br/>10 lignes"]
+flowchart BT
+    A["ANNONCE<br/>120 lignes"] --> J1
+    C["CATEGORIE<br/>20 lignes"] --> J1
+    J1["⋈ id_categorie<br/>120 lignes"] --> J2
+    M["MEMBRE<br/>40 lignes"] --> J2
+    J2["⋈ id_vendeur = id_membre<br/>120 lignes"] --> S
+    S["σ prix_vente > 25 ∧ nom_categorie = 'Robes'<br/>6 lignes"] --> P
+    P["π pseudo<br/>6 lignes"]
 ```
+
+| Étape | Calcul | Instructions |
+|---|---|---|
+| Jointure ANNONCE ⋈ CATEGORIE | 120 × 20 | 2 400 |
+| Jointure avec MEMBRE | 120 × 40 | 4 800 |
+| Sélection | 120 | 120 |
+| Projection | 6 | 6 |
+| **Total** | | **7 326** |
+
+**Plan 2 : les deux sélections avant les jointures**
+
+```mermaid
+flowchart BT
+    A["ANNONCE<br/>120 lignes"] --> S1
+    C["CATEGORIE<br/>20 lignes"] --> S2
+    S1["σ prix_vente > 25<br/>51 lignes"] --> J1
+    S2["σ nom_categorie = 'Robes'<br/>1 ligne"] --> J1
+    J1["⋈ id_categorie<br/>6 lignes"] --> J2
+    M["MEMBRE<br/>40 lignes"] --> J2
+    J2["⋈ id_vendeur = id_membre<br/>6 lignes"] --> P
+    P["π pseudo<br/>6 lignes"]
+```
+
+| Étape | Calcul | Instructions |
+|---|---|---|
+| Sélection sur ANNONCE | 120 | 120 |
+| Sélection sur CATEGORIE | 20 | 20 |
+| Jointure ANNONCE ⋈ CATEGORIE | 51 × 1 | 51 |
+| Jointure avec MEMBRE | 6 × 40 | 240 |
+| Projection | 6 | 6 |
+| **Total** | | **437** |
+
+**Plan 3 : la sélection sur CATEGORIE d'abord, celle sur le prix après la première jointure**
+
+```mermaid
+flowchart BT
+    C["CATEGORIE<br/>20 lignes"] --> S2
+    S2["σ nom_categorie = 'Robes'<br/>1 ligne"] --> J1
+    A["ANNONCE<br/>120 lignes"] --> J1
+    J1["⋈ id_categorie<br/>17 lignes"] --> S1
+    S1["σ prix_vente > 25<br/>6 lignes"] --> J2
+    M["MEMBRE<br/>40 lignes"] --> J2
+    J2["⋈ id_vendeur = id_membre<br/>6 lignes"] --> P
+    P["π pseudo<br/>6 lignes"]
+```
+
+| Étape | Calcul | Instructions |
+|---|---|---|
+| Sélection sur CATEGORIE | 20 | 20 |
+| Jointure ANNONCE ⋈ CATEGORIE | 1 × 120 | 120 |
+| Sélection sur le prix | 17 | 17 |
+| Jointure avec MEMBRE | 6 × 40 | 240 |
+| Projection | 6 | 6 |
+| **Total** | | **403** |
+
+**Conclusion.** Le plan 1 est de loin le plus coûteux (7 326 instructions), car les deux jointures sont faites sur les tables complètes. Faire les sélections avant les jointures divise le coût par plus de 16. Le plan 3 est le plus optimisé (403 instructions). La sélection sur CATEGORIE est très sélective (elle ne garde qu'une ligne sur 20), donc elle doit être faite en premier. La sélection sur le prix garde 51 annonces sur 120 : il est moins coûteux de l'appliquer après la première jointure, sur les 17 robes, que sur les 120 annonces. Enfin, la jointure avec MEMBRE est faite en dernier, sur 6 lignes seulement. La règle « faire les sélections le plus tôt possible » est donc une bonne heuristique, mais le calcul montre qu'il faut appliquer en priorité les sélections les plus sélectives, et garder les jointures pour les relations déjà réduites.
