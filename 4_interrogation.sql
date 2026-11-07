@@ -212,9 +212,10 @@ GROUP BY e.id_evalue, m.pseudo
 HAVING AVG(e.note) > (SELECT AVG(note) FROM evaluation)
 ORDER BY note_moyenne DESC;
 
--- E1. Titres et prix des robes encore en ligne (requête étudiée dans le README).
-SELECT a.titre, a.prix_vente
-FROM annonce a
+-- E1. Pseudos des membres ayant publié une robe à plus de 25 € (requête étudiée dans le README).
+SELECT m.pseudo
+FROM membre m
+JOIN annonce a ON a.id_vendeur = m.id_membre
 JOIN categorie c ON c.id_categorie = a.id_categorie
 WHERE c.nom_categorie = 'Robes'
-  AND a.statut = 'en ligne';
+  AND a.prix_vente > 25;
