@@ -267,9 +267,9 @@ Les clés étrangères en double générées par Looping (`id_membre`, `id_membr
 
 ### 4.2. MPD (Modèle Physique de Données)
 Le MPD est implémenté en SQL (compatible PostgreSQL) dans les fichiers suivants :
-- `1_creation.sql` : création des tables et des clés.
-- `2_contraintes.sql` : contraintes de validation (CHECK, UNIQUE...).
- ([`1_creation.sql`](1_creation.sql))
+- `1_creation.sql` : création des tables et des clés.([`1_creation.sql`](1_creation.sql)
+- `2_contraintes.sql` : contraintes de validation (CHECK, UNIQUE...).([`2_contraintes.sql`](2_contraintes.sql))
+ 
 ---
 
 ## 5. Étape 5 : Interrogation de la BD
