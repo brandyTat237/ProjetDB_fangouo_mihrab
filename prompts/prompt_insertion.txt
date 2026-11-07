@@ -1,0 +1,77 @@
+Donne les requêtes d'insertion permettant de remplir la base de données MySQL d'une plateforme de revente d'articles d'occasion entre particuliers (type Vinted), dont le modèle relationnel est le suivant :
+
+membre (id_membre, pseudo, nom, prenom, email, mot_de_passe, adresse_rue, code_postal, ville, date_inscription, solde)
+  → clé primaire : id_membre
+categorie (id_categorie, nom_categorie, #id_categorie_mere)
+  → clé primaire : id_categorie ; id_categorie_mere fait référence à id_categorie de la même table et vaut NULL pour une catégorie principale
+marque (id_marque, nom_marque)
+  → clé primaire : id_marque
+transporteur (id_transporteur, nom_transporteur)
+  → clé primaire : id_transporteur
+point_relais (id_point_relais, nom_point_relais, adresse_point_relais)
+  → clé primaire : id_point_relais
+commande (num_commande, date_commande, frais_protection, frais_port, moyen_paiement, #id_acheteur)
+  → clé primaire : num_commande ; id_acheteur fait référence à id_membre
+annonce (id_annonce, titre, description, prix_vente, etat, taille, date_publication, statut, #id_vendeur, #id_categorie, #id_marque, #num_commande)
+  → clé primaire : id_annonce ; id_vendeur fait référence à id_membre ; id_marque peut être NULL ; num_commande vaut NULL tant que l'article n'est pas vendu
+photo (#id_annonce, num_ordre, url_photo)
+  → clé primaire composée : (id_annonce, num_ordre)
+mise_en_avant (#id_annonce, date_debut, duree_jours, prix_option)
+  → clé primaire composée : (id_annonce, date_debut)
+met_en_favori (#id_membre, #id_annonce)
+  → clé primaire composée : (id_membre, id_annonce)
+message (id_message, contenu, date_heure_envoi, prix_propose, reponse_offre, #id_annonce, #id_expediteur, #id_destinataire)
+  → clé primaire : id_message ; id_expediteur et id_destinataire font référence à id_membre ; prix_propose et reponse_offre valent NULL si le message n'est pas une offre
+livraison (num_suivi, mode_livraison, date_envoi, date_livraison, #num_commande, #id_transporteur, #id_point_relais)
+  → clé primaire : num_suivi ; num_commande est UNIQUE (une seule livraison par commande) ; id_point_relais vaut NULL pour une livraison à domicile
+evaluation (id_evaluation, note, commentaire, date_evaluation, #id_auteur, #id_evalue, #num_commande)
+  → clé primaire : id_evaluation ; id_auteur et id_evalue font référence à id_membre ; le couple (id_auteur, num_commande) est UNIQUE
+litige (id_litige, motif, description, date_ouverture, decision, date_cloture, #num_commande)
+  → clé primaire : id_litige ; num_commande est UNIQUE (un seul litige par commande)
+
+Les clés primaires correspondent aux id, sauf si autre chose est précisé (attribut composé ou num_commande / num_suivi). Les clés étrangères sont identifiées par les #, et ont le même nom que les clés primaires auxquelles elles font référence, sauf si autre chose est précisé.
+
+Il doit y avoir : 40 membres, 20 catégories organisées sur 3 niveaux (par exemple Femmes > Vêtements > Robes), 15 marques, 4 transporteurs (Mondial Relay, Colissimo, Relais Colis, Chronopost), 12 points relais, 120 annonces rangées uniquement dans des catégories du dernier niveau, entre 1 et 5 photos par annonce, 25 mises en avant, 150 favoris, 150 messages, 45 commandes avec chacune une livraison, des évaluations pour la plupart des commandes livrées et 8 litiges.
+
+Les clés étrangères doivent faire référence aux clés primaires existantes : donne les lignes en commençant par remplir les tables dans lesquelles il n'y a pas de clés étrangères, puis les tables dans lesquelles les clés étrangères font référence à des clés primaires des tables déjà remplies. Attention : categorie fait référence à elle-même, donc les catégories mères doivent être insérées avant leurs sous-catégories ; commande doit être remplie avant annonce, car annonce fait référence à commande.
+
+Les données doivent respecter les contraintes de validation suivantes :
+ALTER TABLE membre ADD CONSTRAINT chk_membre_email CHECK (email LIKE '%_@_%._%');
+ALTER TABLE membre ADD CONSTRAINT chk_membre_code_postal CHECK (code_postal REGEXP '^[0-9]{5}$');
+ALTER TABLE membre ADD CONSTRAINT chk_membre_solde CHECK (solde >= 0);
+ALTER TABLE annonce ADD CONSTRAINT chk_annonce_prix CHECK (prix_vente > 0);
+ALTER TABLE annonce ADD CONSTRAINT chk_annonce_etat CHECK (etat IN ('neuf avec étiquette', 'neuf sans étiquette', 'très bon état', 'bon état', 'satisfaisant'));
+ALTER TABLE annonce ADD CONSTRAINT chk_annonce_statut CHECK (statut IN ('en ligne', 'réservée', 'vendue', 'retirée'));
+ALTER TABLE photo ADD CONSTRAINT chk_photo_num_ordre CHECK (num_ordre BETWEEN 1 AND 20);
+ALTER TABLE photo ADD CONSTRAINT chk_photo_url CHECK (url_photo LIKE 'https://%');
+ALTER TABLE mise_en_avant ADD CONSTRAINT chk_mea_duree CHECK (duree_jours BETWEEN 1 AND 30);
+ALTER TABLE mise_en_avant ADD CONSTRAINT chk_mea_prix CHECK (prix_option > 0);
+ALTER TABLE message ADD CONSTRAINT chk_message_prix CHECK (prix_propose > 0);
+ALTER TABLE message ADD CONSTRAINT chk_message_reponse CHECK (reponse_offre IN ('acceptée', 'refusée'));
+ALTER TABLE message ADD CONSTRAINT chk_message_offre CHECK (reponse_offre IS NULL OR prix_propose IS NOT NULL);
+ALTER TABLE commande ADD CONSTRAINT chk_commande_num CHECK (num_commande REGEXP '^CMD-[0-9]{8}$');
+ALTER TABLE commande ADD CONSTRAINT chk_commande_frais CHECK (frais_protection >= 0 AND frais_port >= 0);
+ALTER TABLE commande ADD CONSTRAINT chk_commande_paiement CHECK (moyen_paiement IN ('carte bancaire', 'PayPal', 'porte-monnaie'));
+ALTER TABLE livraison ADD CONSTRAINT chk_livraison_mode CHECK (mode_livraison IN ('domicile', 'point relais'));
+ALTER TABLE livraison ADD CONSTRAINT chk_livraison_dates CHECK (date_livraison IS NULL OR (date_envoi IS NOT NULL AND date_livraison >= date_envoi));
+ALTER TABLE evaluation ADD CONSTRAINT chk_evaluation_note CHECK (note BETWEEN 1 AND 5);
+ALTER TABLE litige ADD CONSTRAINT chk_litige_motif CHECK (motif IN ('article non reçu', 'endommagé', 'non conforme à la description', 'contrefaçon'));
+ALTER TABLE litige ADD CONSTRAINT chk_litige_decision CHECK (decision IN ('remboursement total', 'remboursement partiel', 'refus'));
+ALTER TABLE litige ADD CONSTRAINT chk_litige_dates CHECK (date_cloture IS NULL OR date_cloture >= date_ouverture);
+ALTER TABLE litige ADD CONSTRAINT chk_litige_cloture CHECK ((decision IS NULL AND date_cloture IS NULL) OR (decision IS NOT NULL AND date_cloture IS NOT NULL));
+Le pseudo et l'e-mail de chaque membre sont uniques.
+
+Les données doivent aussi respecter les règles métier suivantes :
+- Une commande regroupe 1 à 3 annonces d'un même vendeur, et l'acheteur est toujours différent du vendeur. Les annonces d'une commande ont le statut 'vendue' ; les annonces sans commande ont un autre statut.
+- La date de commande est postérieure à la date de publication des annonces commandées. Les frais de protection valent 0,70 € plus 5 % du prix des articles ; les frais de port sont compris entre 2,50 € et 8 €.
+- Le vendeur expédie dans les 5 jours qui suivent la commande ; le colis est livré quelques jours après l'envoi. Les commandes les plus récentes peuvent ne pas encore être livrées (date_livraison NULL) ou envoyées (date_envoi NULL).
+- Une livraison en point relais a un id_point_relais ; une livraison à domicile n'en a pas.
+- Les évaluations portent uniquement sur des commandes livrées : l'acheteur évalue le vendeur, le vendeur évalue l'acheteur, et un membre ne s'évalue jamais lui-même.
+- Les litiges sont ouverts dans les 2 jours qui suivent la livraison ; certains sont clos avec une décision, d'autres sont encore en cours.
+- Un message est envoyé entre deux membres différents, dont l'un est le vendeur de l'annonce. Certains messages sont des offres avec un prix proposé inférieur au prix de vente, acceptées ou refusées.
+- Un membre ne met pas ses propres annonces en favori. Une mise en avant commence après la publication de l'annonce et dure 3 ou 7 jours.
+- Les dates sont réparties entre janvier 2025 et octobre 2026.
+
+Assure-toi que les noms et prénoms des membres font référence à des origines variées et sont mixtes, que les villes et codes postaux sont de vraies communes françaises, et que les annonces (titres, descriptions, tailles, prix, marques) sont réalistes et cohérentes avec leur catégorie.
+
+Ne crée pas les tables, elles existent déjà. Fournis l'ensemble sous la forme d'un script SQL prêt à être exécuté, commençant par USE revente;
