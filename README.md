@@ -226,27 +226,50 @@ Il comporte **13 entités** (MEMBRE, ANNONCE, CATEGORIE, MARQUE, PHOTO, MISE_EN_
 
 ## 4. Partie 2 : MLD et MPD
 
-### 4.1. MLD (Modèle Logique de Données)
-En appliquant les règles de transformation de MCD vers MLD, on obtient les relations suivantes:
+### 4.1 MLD
+
+Le MLD a été généré automatiquement avec Looping à partir du MCD, en appliquant les règles de passage au modèle relationnel. Les clés primaires sont soulignées et les clés étrangères sont précédées de `#`.
+
+![MLD](MCD/MLDminiprojet2.png)
+
+Les clés étrangères en double générées par Looping (`id_membre`, `id_membre_1`, `id_categorie_1`) ont été renommées selon leur rôle dans le script SQL et dans la liste ci-dessous.
+
 - **MEMBRE** (<u>id_membre</u>, pseudo, nom, prenom, email, mot_de_passe, adresse_rue, code_postal, ville, date_inscription, solde)
-- **CATEGORIE** (<u>id_categorie</u>, nom_categorie, #id_categorie_parent)
+- **CATEGORIE** (<u>id_categorie</u>, nom_categorie, #id_categorie_mere)
 - **MARQUE** (<u>id_marque</u>, nom_marque)
-- **ANNONCE** (<u>id_annonce</u>, titre, description, prix_vente, etat, taille, date_publication, statut, #id_membre, #id_marque, #id_categorie)
-- **PHOTO** (<u>id_annonce</u>, <u>num_ordre</u>, url_photo) *- Clé primaire composite*
-- **MISE_EN_AVANT** (<u>id_annonce</u>, <u>date_debut</u>, duree_jours, prix_option) *- Clé primaire composite*
-- **MESSAGE** (<u>id_message</u>, contenu, date_heure_envoi, prix_propose, reponse_offre, #id_annonce, #id_membre_expediteur, #id_membre_destinataire)
-- **COMMANDE** (<u>num_commande</u>, date_commande, frais_protection, frais_port, moyen_paiement, #id_membre, #id_annonce)
+- **COMMANDE** (<u>num_commande</u>, date_commande, frais_protection, frais_port, moyen_paiement, #id_acheteur)
+- **ANNONCE** (<u>id_annonce</u>, titre, description, prix_vente, etat, taille, date_publication, statut, #id_vendeur, #id_categorie, #id_marque, #num_commande)
+- **PHOTO** (<u>#id_annonce, num_ordre</u>, url_photo)
+- **MISE_EN_AVANT** (<u>#id_annonce, date_debut</u>, duree_jours, prix_option)
+- **MET_EN_FAVORI** (<u>#id_membre, #id_annonce</u>)
+- **MESSAGE** (<u>id_message</u>, contenu, date_heure_envoi, prix_propose, reponse_offre, #id_annonce, #id_expediteur, #id_destinataire)
 - **TRANSPORTEUR** (<u>id_transporteur</u>, nom_transporteur)
-- **POINT_RELAIS** (<u>id_point_relais</u>, adresse_point_relais, nom_point_relais)
+- **POINT_RELAIS** (<u>id_point_relais</u>, nom_point_relais, adresse_point_relais)
 - **LIVRAISON** (<u>num_suivi</u>, mode_livraison, date_envoi, date_livraison, #num_commande, #id_transporteur, #id_point_relais)
-- **LITIGE** (<u>id_litige</u>, date_ouverture, date_cloture, motif, description, decision, #num_commande)
-- **EVALUATION** (<u>id_evaluation</u>, note, commentaire, date_evaluation, #id_membre_redacteur, #id_membre_evalue, #num_commande)
+- **EVALUATION** (<u>id_evaluation</u>, note, commentaire, date_evaluation, #id_auteur, #id_evalue, #num_commande)
+- **LITIGE** (<u>id_litige</u>, motif, description, date_ouverture, decision, date_cloture, #num_commande)
+
+| Clé générée par Looping | Nom retenu | Rôle |
+|---|---|---|
+| `ANNONCE.id_membre` | `id_vendeur` | membre qui publie l'annonce |
+| `COMMANDE.id_membre` | `id_acheteur` | membre qui passe la commande |
+| `CATEGORIE.id_categorie_1` | `id_categorie_mere` | catégorie qui contient la sous-catégorie |
+| `MESSAGE.id_membre` / `id_membre_1` | `id_expediteur` / `id_destinataire` | membre qui envoie / qui reçoit le message |
+| `EVALUATION.id_membre` / `id_membre_1` | `id_auteur` / `id_evalue` | membre qui rédige / qui est évalué |
+
+**Remarques sur le passage au MLD :**
+
+- L'association n-n « met en favori » devient la table MET_EN_FAVORI, dont la clé primaire est composée des deux clés étrangères.
+- Les entités faibles PHOTO et MISE_EN_AVANT ont une clé primaire composée de la clé de l'annonce et de leur identifiant relatif.
+- L'association récursive « sous-catégorie de » devient la clé étrangère `id_categorie_mere`, qui référence CATEGORIE elle-même (vide pour une catégorie principale).
+- Les cardinalités 0,1 donnent des clés étrangères facultatives : `id_marque`, `num_commande` dans ANNONCE (article non vendu) et `id_point_relais` (livraison à domicile).
+- `num_commande` est unique dans LIVRAISON et dans LITIGE, car une commande donne lieu à une seule livraison et fait l'objet d'au plus un litige.
 
 ### 4.2. MPD (Modèle Physique de Données)
 Le MPD est implémenté en SQL (compatible PostgreSQL) dans les fichiers suivants :
 - `1_creation.sql` : création des tables et des clés.
 - `2_contraintes.sql` : contraintes de validation (CHECK, UNIQUE...).
-
+ ([`1_creation.sql`](1_creation.sql))
 ---
 
 ## 5. Étape 5 : Interrogation de la BD
